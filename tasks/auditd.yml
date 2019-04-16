@@ -4,8 +4,9 @@
 ## https://github.com/lxc/lxd/issues/2004, only on xenial?
     - name: ensure auditd package is present
       package: name={{ auditd_pkg }} state=present update_cache=yes
-      register: pkg_result
-      until: pkg_result is success
+
+    - name: ensure audisp package is present
+      package: name={{ audispd_pkg }} state=present update_cache=yes
 
     - name: retrieve suid/sgid files list
       command: find / -perm /u=s,g=s -type f
@@ -24,6 +25,20 @@
         - augenrules - debian
         - restart auditd
         - restart auditd - rhel7
+      ignore_errors: "{{ ansible_check_mode }}"
+
+    - name: auditd and audisp Config files
+      template:
+        src: '{{ item.src }}'
+        dest: '{{ item.dest }}'
+        owner: root
+        group: root
+        mode: '0640'
+      with_items:
+        - { src: 'auditd.conf.j2',        dest: '{{ auditd_home }}/auditd.conf' }
+        - { src: 'audisp-syslog.conf.j2', dest: '{{ auditd_disp_home }}/plugins.d/syslog.conf' }
+      notify:
+        - restart auditd
 
 ## FIXME! trusty? FAILED! => {"changed": true, "exit_status": 1, "failed": true,
 ##      "msg": "failed to validate", "stderr":
@@ -60,6 +75,7 @@
         - name: Enable Auditing in grub for Processes That Start Prior to auditd - CIS
           replace: dest=/etc/default/grub regexp='^GRUB_CMDLINE_LINUX="(.*)"' replace='GRUB_CMDLINE_LINUX="\1 audit=1"'
           when: not auditgrub.stdout
+          ignore_errors: "{{ ansible_check_mode }}"
       when: hasgrub.stat is defined and hasgrub.stat.exists
     - name: Enable and start auditd
       service: name=auditd state=started enabled=yes
