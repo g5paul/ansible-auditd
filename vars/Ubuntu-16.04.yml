@@ -1,4 +1,8 @@
 ---
 
 auditd_pkg: auditd
+audispd_pkg: audispd-plugins
+
 auditd_confdir: /etc/audit/rules.d
+
+monit_confdir: /etc/monit/conf-available
